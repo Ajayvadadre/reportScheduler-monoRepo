@@ -53,6 +53,13 @@ function validateScheduleConfig(configData) {
         return { valid: false, message: 'Report date range is required' };
     }
 
+    const startDate = new Date(date.start);
+    const endDate = new Date(date.end);
+
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || startDate > endDate) {
+        return { valid: false, message: 'Start date must be before or equal to end date' };
+    }
+
     if (!['aws', 'sftp'].includes(config.uploadType)) {
         return { valid: false, message: 'Upload type must be aws or sftp' };
     }
@@ -69,6 +76,18 @@ async function persistScheduleInRedis(configData) {
     const config = normalizeConfig(configData);
     await client.sAdd('reportscheduler:schedules:active', config.data.id);
     await client.set(`reportscheduler:schedules:${config.data.id}`, JSON.stringify(config));
+}
+
+async function removeScheduleFromRedis(scheduleId) {
+    const client = RedisConnection.getClient();
+    if (!client) {
+        return;
+    }
+
+    await client.sRem('reportscheduler:schedules:active', scheduleId);
+    await client.del(`reportscheduler:schedules:${scheduleId}`);
+    await client.del(`reportscheduler:schedules:${scheduleId}:lastRunAt`);
+    await client.del(`reportscheduler:schedules:${scheduleId}:lock`);
 }
 
 async function initReportSchedule(configData) {
@@ -90,8 +109,19 @@ async function initReportSchedule(configData) {
     return scheduleCron(cronRule, config);
 }
 
+async function stopReportSchedule(scheduleId) {
+    if (scheduledJobs.has(scheduleId)) {
+        scheduledJobs.get(scheduleId).stop();
+        scheduledJobs.delete(scheduleId);
+        console.log(`log::: Stopped cron job for ID ${scheduleId}`);
+    }
+
+    localExecutionLocks.delete(scheduleId);
+    await removeScheduleFromRedis(scheduleId);
+}
+
 async function initAllReportSchedules() {
-    const configs = await schedulerConfigSchema.find({ active: true }).lean();
+    const configs = await schedulerConfigSchema.find({ active: true, status: { $ne: 'terminate' } }).lean();
 
     for (const config of configs) {
         const scheduleStatus = await initReportSchedule(config);
@@ -220,6 +250,7 @@ async function executeReport(configData) {
 
         if (!scheduleData) {
             console.log("log::: Unable to find config to generate the csv report", id);
+            await stopReportSchedule(id);
             await writeReportStatus(config, 'failed', 'ReportGenerateFailure::: Unable to find config to generate csv report');
             return;
         }
@@ -275,7 +306,7 @@ async function uploadToS3(generatedCsv, configData) {
     if (!bucket) {
         throw new Error('Missing S3 bucket. Provide credentials.bucket or AWS_S3_BUCKET');
     }
-
+    
     const s3Client = new S3Client({
         region: awsConfig.region || process.env.AWS_REGION,
         credentials: awsConfig.accessKeyId && awsConfig.secretAccessKey
@@ -295,6 +326,8 @@ async function uploadToS3(generatedCsv, configData) {
         Body: fs.createReadStream(generatedCsv.filePath),
         ContentType: 'text/csv'
     }));
+
+    console.log("Successfully uploaded report to AWS s3")
 }
 
 async function uploadToSFTP(generatedCsv, configData) {
@@ -325,5 +358,6 @@ async function uploadToSFTP(generatedCsv, configData) {
 export {
     initReportSchedule,
     initAllReportSchedules,
+    stopReportSchedule,
     validateScheduleConfig
 };

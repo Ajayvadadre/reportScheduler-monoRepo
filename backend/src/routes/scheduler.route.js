@@ -35,7 +35,7 @@ router.get('/getConfigurations', async (req, res) => {
         let configData = await getConfigData();
 
         if (!configData) {
-            res.status(404).json({
+            res.status(200).json({
                 status: "successful",
                 message: "No data found"
             });

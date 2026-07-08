@@ -1,4 +1,4 @@
-import { initReportSchedule, validateScheduleConfig } from '../services/reportScheduler.service.js';
+import { initReportSchedule, stopReportSchedule, validateScheduleConfig } from '../services/reportScheduler.service.js';
 import reportStatusSchema from '../models/reportStatus.model.js';
 import schedulerConfigSchema from '../models/schedulerConfig.model.js';
 import reportDataSchema from '../models/reportData.model.js';
@@ -30,7 +30,6 @@ async function getConfigData() {
 async function saveSchedulerConfig(scheduleConfig) {
 
     const validation = validateScheduleConfig(scheduleConfig);
-    console.log(validation)
     if (!validation.valid) {
         console.log('log::: Scheduler config validation failed:::', validation.message);
         return false;
@@ -73,6 +72,14 @@ async function insertReportData(data) {
 
 async function updateScheduleList(data) {
 
+    const configs = await schedulerConfigSchema.find(
+        { _id: { $in: data.ids } },
+        { id: 1 }
+    ).lean();
+
+    for (const config of configs) {
+        await stopReportSchedule(config.id);
+    }
 
     if (data.status == 'terminate') {
 
