@@ -22,7 +22,7 @@ export default function authenticate(req, res, next) {
         })
     } catch (error) {
         console.log("Error: JWT authentication error:", error.message);
-        res.send(500).json({
+        res.status(500).json({
             message: "unable to authenticate user, server error",
             status: "failed"
         })

@@ -1,4 +1,18 @@
+import { useNavigate } from 'react-router';
+import { useAuth } from './AuthContext';
+
 const Navbar = () => {
+  const { user, logoutUser } = useAuth();
+  const navigate = useNavigate();
+
+  const userName = user?.email?.split('@')[0] || 'User';
+  const initials = userName.slice(0, 2).toUpperCase();
+
+  const handleLogout = async () => {
+    await logoutUser();
+    navigate('/login');
+  };
+
   return (  
     <div className="h-full w-full bg-white border-b border-slate-200/80 px-6 flex items-center justify-between shadow-xs">
       {/* Brand logo & name */}
@@ -39,12 +53,19 @@ const Navbar = () => {
         {/* User profile */}
         <div className="flex items-center gap-2.5">
           <div className="text-right hidden sm:block">
-            <p className="text-xs font-semibold text-slate-900 leading-tight">Alex Rivera</p>
+            <p className="text-xs font-semibold text-slate-900 leading-tight">{userName}</p>
             <span className="text-[10px] font-medium text-slate-500 block leading-none">Cluster Admin</span>
           </div>
           <div className="h-8 w-8 rounded-lg bg-slate-100 border border-slate-200/80 flex items-center justify-center text-xs font-bold text-slate-700 shadow-xs">
-            AR
+            {initials}
           </div>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+          >
+            Logout
+          </button>
         </div>
       </div>
     </div>
