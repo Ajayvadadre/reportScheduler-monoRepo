@@ -36,11 +36,7 @@ const ActiveSchedules = ({ schedules, onUpdated }: ActiveSchedulesProps) => {
 
     try {
 
-      await api.post(`${VITE_API_BASE_URL}/schedule/updateScheduleList`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      await api.post(`${VITE_API_BASE_URL}/schedule/updateScheduleList`, payload)
 
       setSelectedIds(new Set());
       console.log("After APIS:", selectedIds)
