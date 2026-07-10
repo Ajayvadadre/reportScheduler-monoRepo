@@ -7,7 +7,7 @@ function getCookieOptions() {
     return {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: 'none',
         maxAge: Number(process.env.MAX_TOKEN_AGE) || 21600000
     };
 }
