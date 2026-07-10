@@ -33,6 +33,7 @@ export interface ReportData {
 
 export interface AwsCredentials {
   region: string;
+  bucket: string;
   accessKeyId: string;
   secretAccessKey: string;
 }

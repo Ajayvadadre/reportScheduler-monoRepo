@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import type { SaveSchedulerPayload, CreateSchedulesProps } from '../types';
+import { useNotification } from './Notification.tsx';
+import api from '../api.ts'
 
 const CreateSchedules = ({ onCreated }: CreateSchedulesProps) => {
   const [step, setStep] = useState<1 | 2>(1);
@@ -14,6 +16,7 @@ const CreateSchedules = ({ onCreated }: CreateSchedulesProps) => {
 
   // AWS S3 Credentials
   const [awsRegion, setAwsRegion] = useState('us-east-1');
+  const [awsBucket, setAwsBucket] = useState('reportscheduler');
   const [awsAccessKey, setAwsAccessKey] = useState('');
   const [awsSecretKey, setAwsSecretKey] = useState('');
 
@@ -27,7 +30,7 @@ const CreateSchedules = ({ onCreated }: CreateSchedulesProps) => {
   // Deployment stages
   const [deployState, setDeployState] = useState<'idle' | 'validating' | 'connecting' | 'registering' | 'success'>('idle');
   const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
+  const { triggerNotification } = useNotification();
 
   // Types are now imported from ../types.ts
 
@@ -55,6 +58,7 @@ const CreateSchedules = ({ onCreated }: CreateSchedulesProps) => {
         uploadType: uploadType,
         credentials: uploadType == "aws" ? {
           region: awsRegion,
+          bucket: awsBucket,
           accessKeyId: awsAccessKey,
           secretAccessKey: awsSecretKey
         } : {
@@ -67,18 +71,22 @@ const CreateSchedules = ({ onCreated }: CreateSchedulesProps) => {
         status: 'active'
       };
 
-      const saveData = await fetch(`${VITE_API_BASE_URL}/schedule/saveSchedulerConfig`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(payload)
-      });
+      try {
 
-      if (!saveData.ok) {
-        throw new Error("Failed to save configuration");
+        const saveData = await api.post(`${VITE_API_BASE_URL}/schedule/saveSchedulerConfig`, payload);
+
+        if (saveData.data && saveData.data.status === "successful") {
+          console.log("Configuration saved completely!");
+          triggerNotification(saveData.data.message, "success")
+          await onCreated()
+        }
+      } catch (error: any) {
+
+        console.log("Failed to save configuration", error);
+        const finalFallbackMessage = error.response?.data?.message || "Failed to save configuration";
+        triggerNotification(finalFallbackMessage, "error")
       }
-     await onCreated()
+
 
       // Simulate progressive deployment phases
       setTimeout(() => {
@@ -386,6 +394,21 @@ const CreateSchedules = ({ onCreated }: CreateSchedulesProps) => {
                     value={awsRegion}
                     onChange={(e) => setAwsRegion(e.target.value)}
                     placeholder="us-east-1"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none"
+                    required
+                  />
+                </div>
+
+                {/* Bucket */}
+                <div>
+                  <label className="mb-1 block text-[11px] font-semibold text-slate-500">
+                    S3 Bucket
+                  </label>
+                  <input
+                    type="text"
+                    value={awsBucket}
+                    onChange={(e) => setAwsBucket(e.target.value)}
+                    placeholder="reportscheduler"
                     className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none"
                     required
                   />

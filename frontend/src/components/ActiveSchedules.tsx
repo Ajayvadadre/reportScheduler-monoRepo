@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import type { ActiveSchedulesProps, Actions } from '../types';
+import api from '../api.ts'
+
 
 const ActiveSchedules = ({ schedules, onUpdated }: ActiveSchedulesProps) => {
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const showTopButtons = selectedIds.size > 0;
   const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL
-
+  console.log(selectedIds)
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
       setSelectedIds(new Set(schedules.map(s => s._id)));
@@ -22,7 +24,6 @@ const ActiveSchedules = ({ schedules, onUpdated }: ActiveSchedulesProps) => {
       updated.add(id);
     } else {
       updated.delete(id);
-      // setShowTopButtons(false)
     }
     setSelectedIds(updated);
   };
@@ -35,12 +36,14 @@ const ActiveSchedules = ({ schedules, onUpdated }: ActiveSchedulesProps) => {
 
     try {
 
-      await fetch(`${VITE_API_BASE_URL}/schedule/updateScheduleList`, {
+      await api.post(`${VITE_API_BASE_URL}/schedule/updateScheduleList`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
+      setSelectedIds(new Set());
+      console.log("After APIS:", selectedIds)
       await onUpdated();
 
     } catch (error) {
