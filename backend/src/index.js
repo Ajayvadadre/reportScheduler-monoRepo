@@ -8,6 +8,7 @@ import authRoutes from './routes/auth.route.js'
 import MongoConnection from './database/mongoConnection.js';
 import RedisConnection from './database/redisConnection.js';
 import { initAllReportSchedules } from './services/reportScheduler.service.js';
+import { startReportCsvCleanup } from './services/reportCleanup.service.js';
 
 const app = express();
 const {
@@ -33,6 +34,7 @@ async function startServer() {
         console.log('log ::: Mongo connection established');
         await RedisConnection.startRedis();
         await initAllReportSchedules();
+        startReportCsvCleanup();
 
         app.listen(PORT, () => {
             console.log("server listening on port:::", PORT);

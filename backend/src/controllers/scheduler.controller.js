@@ -4,7 +4,7 @@ import schedulerConfigSchema from '../models/schedulerConfig.model.js';
 import reportDataSchema from '../models/reportData.model.js';
 
 
-async function getReportStatus() { 
+async function getReportStatus() {
 
     let reportData = await reportStatusSchema.find({}).sort({ _id: -1 }).limit(50);
 
